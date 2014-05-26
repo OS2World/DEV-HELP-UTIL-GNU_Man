@@ -1,0 +1,411 @@
+diff -cb orig/config.h new/config.h
+*** orig/config.h	Mon Oct 12 21:07:54 1992
+--- new/config.h	Mon Oct 12 20:27:50 1992
+***************
+*** 17,27 ****
+   */
+  
+  #ifndef BUFSIZ
+! #define BUFSIZ 1024
+  #endif
+  
+  #ifndef MAXPATHLEN
+! #define MAXPATHLEN 512
+  #endif
+  
+  #ifndef MAXDIRS
+--- 17,27 ----
+   */
+  
+  #ifndef BUFSIZ
+! #define BUFSIZ 5120
+  #endif
+  
+  #ifndef MAXPATHLEN
+! #define MAXPATHLEN 254
+  #endif
+  
+  #ifndef MAXDIRS
+***************
+*** 32,39 ****
+   * These are the programs man(1) execs with the -k and -f options.
+   */
+  
+! #define APROPOS "/usr/local/bin/apropos"
+! #define WHATIS  "/usr/local/bin/whatis"
+  
+  /*
+   * This might also be "/usr/ucb/more -s", though I prefer less(1)
+--- 32,39 ----
+   * These are the programs man(1) execs with the -k and -f options.
+   */
+  
+! #define APROPOS "apropos"
+! #define WHATIS  "whatis"
+  
+  /*
+   * This might also be "/usr/ucb/more -s", though I prefer less(1)
+***************
+*** 40,60 ****
+   * because it allows one to backup even when reading from pipes.
+   */
+  
+! #define PAGER   "/usr/local/bin/less -sC"
+  
+! static char config_file[] = "/usr/local/lib/man/manpath.config";
+  
+  /*
+   * These might also be something like
+   *
+!  *  nroff_command[] = "/usr/local/bin/groff -Tascii -man"
+!  *  troff_command[] = "/usr/local/bin/groff -Tps -man"
+   */
+  
+! static char nroff_command[] = "/usr/bin/nroff -man";
+  
+  #ifdef HAS_TROFF
+! static char troff_command[] = "/usr/bin/troff -man";
+  #endif
+  
+  /*
+--- 40,60 ----
+   * because it allows one to backup even when reading from pipes.
+   */
+  
+! #define PAGER   "less"
+  
+! static char config_file[] = "manpath.cfg";
+  
+  /*
+   * These might also be something like
+   *
+!  *  nroff_command[] = "groff -man"
+!  *  troff_command[] = "groff -Tps -man"
+   */
+  
+! static char nroff_command[] = "groff -man";
+  
+  #ifdef HAS_TROFF
+! static char troff_command[] = "groff -Tps -man";
+  #endif
+  
+  /*
+diff -cb orig/gripes.c new/gripes.c
+*** orig/gripes.c	Mon Oct 12 21:07:54 1992
+--- new/gripes.c	Thu Sep 03 19:19:14 1992
+***************
+*** 17,23 ****
+  #include <stdio.h>
+  #include "gripes.h"
+  
+! #ifndef __STDH__
+  extern int fprintf ();
+  extern int fflush ();
+  extern int exit ();
+--- 17,23 ----
+  #include <stdio.h>
+  #include "gripes.h"
+  
+! #ifndef STD_HEADERS
+  extern int fprintf ();
+  extern int fflush ();
+  extern int exit ();
+diff -cb orig/man.c new/man.c
+*** orig/man.c	Mon Oct 12 21:07:56 1992
+--- new/man.c	Mon Oct 12 21:06:24 1992
+***************
+*** 227,233 ****
+  	}
+      }
+  
+!   if (pager == NULL || *pager == NULL)
+      if ((pager = getenv ("PAGER")) == NULL)
+        pager = strdup (PAGER);
+  
+--- 227,233 ----
+  	}
+      }
+  
+!   if (pager == NULL || *pager == 0)
+      if ((pager = getenv ("PAGER")) == NULL)
+        pager = strdup (PAGER);
+  
+***************
+*** 253,258 ****
+--- 253,264 ----
+    downcase (alt_system_name);
+  #endif
+  
++ #ifdef __EMX__
++   for (p = manp; *p; p++)
++     if (*p == '\\')
++       *p = '/';
++ #endif
++ 
+    /*
+     * Expand the manpath into a list for easier handling.
+     */
+***************
+*** 259,265 ****
+--- 265,275 ----
+    mp = manpathlist;
+    for (p = manp ; ; p = end+1)
+      {
++ #ifdef __EMX__
++       if ((end = strchr (p, ';')) != NULL)
++ #else
+        if ((end = strchr (p, ':')) != NULL)
++ #endif
+  	*end = '\0';
+  
+        if (debug)
+***************
+*** 354,360 ****
+    register char **vs;
+  
+    for (vs = valid_sections; *vs != NULL; vs++)
+!     if ((strcmp (*vs, name) == NULL) || (isdigit (name[0])))
+        return strdup (name);
+  
+    return NULL;
+--- 364,370 ----
+    register char **vs;
+  
+    for (vs = valid_sections; *vs != NULL; vs++)
+!     if ((strcmp (*vs, name) == 0) || (isdigit (name[0])))
+        return strdup (name);
+  
+    return NULL;
+***************
+*** 597,603 ****
+    t1 = strrchr (to_name, '/');
+    if (t1 != NULL)
+      {
+!       *t1 = NULL;
+        t2 = strrchr (to_name, '/');
+        *t1 = '/';
+      }
+--- 607,613 ----
+    t1 = strrchr (to_name, '/');
+    if (t1 != NULL)
+      {
+!       *t1 = 0;
+        t2 = strrchr (to_name, '/');
+        *t1 = '/';
+      }
+***************
+*** 720,726 ****
+  
+    found = 0;
+  
+!   if (access (file, R_OK) == NULL)
+      {
+        sprintf (command, "%s %s", pager, file);
+  
+--- 730,736 ----
+  
+    found = 0;
+  
+!   if (access (file, R_OK) == 0)
+      {
+        sprintf (command, "%s %s", pager, file);
+  
+***************
+*** 830,844 ****
+    if (troff || !cat_support)
+      {
+        if (troff)
+! 	sprintf (command, "(cd %s ; %s %s)", path, troff_command, man_file);
+        else
+! 	sprintf (command, "(cd %s ; %s %s | %s)", path, nroff_command,
+! 		 man_file, pager);
+  #else
+    if (!cat_support)
+      {
+!       sprintf (command, "(cd %s ; %s %s | %s)", path, nroff_command,
+! 	       man_file, pager);
+  #endif
+        status = 0;
+        if (debug)
+--- 840,852 ----
+    if (troff || !cat_support)
+      {
+        if (troff)
+! 	sprintf (command, "%s %s", troff_command, man_file);
+        else
+! 	sprintf (command, "%s %s | %s", nroff_command, man_file, pager);
+  #else
+    if (!cat_support)
+      {
+!       sprintf (command, "%s %s | %s", nroff_command, man_file, pager);
+  #endif
+        status = 0;
+        if (debug)
+***************
+*** 862,868 ****
+  
+  	      fprintf (stderr, "Formatting page, please wait...\n");
+  
+! 	      sprintf (command, "(cd %s ; %s %s > %s)", path,
+  		       nroff_command, man_file, cat_file);
+  
+  	      signal (SIGINT, SIG_IGN);
+--- 870,885 ----
+  
+  	      fprintf (stderr, "Formatting page, please wait...\n");
+  
+! #ifdef __EMX__
+! 	      {
+! 		char *p;
+! 		for (p = cat_file; *p; p++)
+! 		  if (*p == '/')
+! 		    *p = '\\';           /* some OS/2 shells die otherwise */
+! 	      }
+! #endif
+! 
+! 	      sprintf (command, "%s %s > %s", 
+  		       nroff_command, man_file, cat_file);
+  
+  	      signal (SIGINT, SIG_IGN);
+***************
+*** 890,896 ****
+  	    }
+  	  else
+  	    {
+! 	      sprintf (command, "(cd %s ; %s %s | %s)", path, nroff_command,
+  		       man_file, pager);
+  
+  	      status = 0;
+--- 907,913 ----
+  	    }
+  	  else
+  	    {
+! 	      sprintf (command, "%s %s | %s", nroff_command,
+  		       man_file, pager);
+  
+  	      status = 0;
+diff -cb orig/manpath.c new/manpath.c
+*** orig/manpath.c	Mon Oct 12 21:07:56 1992
+--- new/manpath.c	Thu Sep 03 19:59:52 1992
+***************
+*** 178,190 ****
+    int i;
+    char *bp;
+    char *p;
+!   char buf[BUFSIZ];
+    DIRLIST *dlp = list;
+    FILE *config;
+  
+!   if ((config = fopen (config_file, "r")) == NULL)
+!     gripe_getting_mp_config (config_file);
+  
+    while ((bp = fgets (buf, BUFSIZ, config)) != NULL)
+      {
+        while (*bp && (*bp == ' ' || *bp == '\t'))
+--- 178,198 ----
+    int i;
+    char *bp;
+    char *p;
+!   char buf[BUFSIZ], cfg_file[MAXPATHLEN];
+    DIRLIST *dlp = list;
+    FILE *config;
+  
+! #ifdef __EMX__
+!   _searchenv(config_file, "INIT", cfg_file);
+!   if (cfg_file[0] == 0)
+!     _searchenv(config_file, "PATH", cfg_file);
+!   if (cfg_file[0] == 0)
+!     strcpy(cfg_file, config_file);
+! #endif
+  
++   if ((config = fopen (cfg_file, "r")) == NULL)
++     gripe_getting_mp_config (cfg_file);
++ 
+    while ((bp = fgets (buf, BUFSIZ, config)) != NULL)
+      {
+        while (*bp && (*bp == ' ' || *bp == '\t'))
+***************
+*** 255,262 ****
+        dlp++;
+      }
+  
+!   dlp->bin[0] = NULL;
+!   dlp->mandir[0] = NULL;
+    dlp->mandatory = 0;
+  
+    return 0;
+--- 263,270 ----
+        dlp++;
+      }
+  
+!   dlp->bin[0] = 0;
+!   dlp->mandir[0] = 0;
+    dlp->mandatory = 0;
+  
+    return 0;
+***************
+*** 332,345 ****
+  
+    for (p = tmppath; ; p = end+1)
+      {
+        if (end = strchr(p, ':'))
+  	*end = '\0';
+  
+        if (debug)
+  	fprintf (stderr, "\npath directory %s ", p);
+  
+!       for (dlp = list; dlp->mandir[0] != NULL; dlp++)
+! 	if (dlp->bin[0] != NULL && !strcmp (p, dlp->bin))
+  	  {
+  	    /*
+  	     * The directory we're working on is in the config file.
+--- 340,357 ----
+  
+    for (p = tmppath; ; p = end+1)
+      {
++ #ifdef __EMX__
++       if (end = strchr(p, ';'))
++ #else
+        if (end = strchr(p, ':'))
++ #endif
+  	*end = '\0';
+  
+        if (debug)
+  	fprintf (stderr, "\npath directory %s ", p);
+  
+!       for (dlp = list; dlp->mandir[0] != 0; dlp++)
+! 	if (dlp->bin[0] != 0 && !strcmp (p, dlp->bin))
+  	  {
+  	    /*
+  	     * The directory we're working on is in the config file.
+***************
+*** 421,427 ****
+--- 421,431 ----
+    while (*lp != NULL)
+      {
+        strcat (manpathlist, *lp);
++ #ifdef __EMX__
++       strcat (manpathlist, ";");
++ #else
+        strcat (manpathlist, ":");
++ #endif
+        lp++;
+      }
+  
+***************
+*** 457,463 ****
+  {
+    int len;
+    register char *t;
+!   register struct stat sb;
+    extern int stat ();
+  
+    len = strlen (p);
+--- 473,479 ----
+  {
+    int len;
+    register char *t;
+!   struct stat sb;
+    extern int stat ();
+  
+    len = strlen (p);
